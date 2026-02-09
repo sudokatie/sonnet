@@ -76,6 +76,17 @@ temperature = 0.8
 max_candidates = 5
 ```
 
+## Roadmap
+
+### v0.2 (Planned)
+- [ ] More poetic forms (villanelle, sestina, pantoum, tanka, ghazal)
+- [ ] Rhyme suggestions while composing
+- [ ] Vocabulary constraints (limit to source text words)
+- [ ] Improved rhyme word determination
+- [ ] Line ranking system for candidate selection
+
+See FEATURE-BACKLOG.md in the clawd repo for detailed acceptance criteria.
+
 ## Requirements
 
 - Python 3.10+
