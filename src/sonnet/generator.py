@@ -14,7 +14,7 @@ try:
 except ImportError:
     HAS_HTTPX = False
 
-from sonnet.forms import FormDefinition, get_syllable_target
+from sonnet.forms import FormDefinition, get_syllable_target, get_rhyme_groups
 
 
 @dataclass
@@ -198,6 +198,60 @@ def generate_candidates(
     return [Candidate(text=line) for line in lines[:config.num_candidates]]
 
 
+def get_ending_word(line: str) -> Optional[str]:
+    """
+    Extract the last word from a line, ignoring punctuation.
+    
+    Args:
+        line: A line of poetry
+    
+    Returns:
+        The last word, or None if line is empty
+    """
+    # Remove trailing punctuation and get words
+    cleaned = re.sub(r'[^\w\s]', '', line.strip())
+    words = cleaned.split()
+    return words[-1].lower() if words else None
+
+
+def get_rhyme_word_for_line(
+    form: FormDefinition,
+    line_index: int,
+    prior_lines: List[str],
+) -> Optional[str]:
+    """
+    Determine what word the current line should rhyme with.
+    
+    Looks at the rhyme scheme to find prior lines that share
+    the same rhyme letter, then extracts their ending word.
+    
+    Args:
+        form: The poetic form (with rhyme_scheme)
+        line_index: Current line index (0-based)
+        prior_lines: Previously generated lines
+    
+    Returns:
+        Word to rhyme with, or None if no constraint
+    """
+    if not form.rhyme_scheme:
+        return None
+    
+    scheme = form.rhyme_scheme.upper()
+    if line_index >= len(scheme):
+        return None
+    
+    current_letter = scheme[line_index]
+    
+    # Find the first prior line with the same letter
+    for prior_idx in range(line_index):
+        if prior_idx < len(scheme) and scheme[prior_idx] == current_letter:
+            # This prior line should rhyme with us
+            if prior_idx < len(prior_lines):
+                return get_ending_word(prior_lines[prior_idx])
+    
+    return None
+
+
 def generate_poem(
     form: FormDefinition,
     theme: str,
@@ -220,8 +274,8 @@ def generate_poem(
     lines = []
     
     for i in range(form.lines):
-        # TODO: Determine rhyme word from prior lines and rhyme scheme
-        rhyme_word = None
+        # Determine rhyme word from prior lines and rhyme scheme
+        rhyme_word = get_rhyme_word_for_line(form, i, lines)
         
         candidates = generate_candidates(
             form=form,
