@@ -18,6 +18,50 @@ from sonnet.forms import FormDefinition, get_syllable_target, get_rhyme_groups
 from sonnet.ranker import Constraints, get_best_candidate
 
 
+def load_vocabulary(path: str) -> set[str]:
+    """
+    Load vocabulary from a file (one word per line).
+    
+    Args:
+        path: Path to vocabulary file
+        
+    Returns:
+        Set of allowed words (lowercase)
+    """
+    with open(path, 'r') as f:
+        return {line.strip().lower() for line in f if line.strip()}
+
+
+def check_vocabulary(line: str, vocabulary: set[str]) -> bool:
+    """
+    Check if all words in a line are in the allowed vocabulary.
+    
+    Args:
+        line: The line to check
+        vocabulary: Set of allowed words (lowercase)
+        
+    Returns:
+        True if all words are in vocabulary, False otherwise
+    """
+    # Extract words (letters only, lowercase)
+    words = re.findall(r'[a-zA-Z]+', line.lower())
+    return all(word in vocabulary for word in words)
+
+
+def filter_by_vocabulary(candidates: list, vocabulary: set[str]) -> list:
+    """
+    Filter candidates to only those using allowed vocabulary.
+    
+    Args:
+        candidates: List of Candidate objects
+        vocabulary: Set of allowed words (lowercase)
+        
+    Returns:
+        Filtered list of candidates
+    """
+    return [c for c in candidates if check_vocabulary(c.text, vocabulary)]
+
+
 @dataclass
 class GenerationConfig:
     """Configuration for LLM generation."""
@@ -26,6 +70,7 @@ class GenerationConfig:
     temperature: float = 0.8
     max_tokens: int = 200
     num_candidates: int = 5
+    vocabulary: Optional[set[str]] = None  # If set, only allow these words
 
 
 @dataclass
@@ -196,7 +241,13 @@ def generate_candidates(
     response = call_llm(prompt, config)
     lines = parse_candidates(response)
     
-    return [Candidate(text=line) for line in lines[:config.num_candidates]]
+    candidates = [Candidate(text=line) for line in lines[:config.num_candidates]]
+    
+    # Apply vocabulary filter if configured
+    if config.vocabulary:
+        candidates = filter_by_vocabulary(candidates, config.vocabulary)
+    
+    return candidates
 
 
 def get_ending_word(line: str) -> Optional[str]:

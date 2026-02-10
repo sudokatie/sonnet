@@ -80,12 +80,38 @@ temperature = 0.8
 max_candidates = 5
 ```
 
+## Vocabulary Constraints
+
+Limit generated poetry to a specific set of words:
+
+```python
+from sonnet.generator import GenerationConfig, load_vocabulary
+
+# Load vocabulary from a file (one word per line)
+vocab = load_vocabulary("my_words.txt")
+
+# Use in generation config
+config = GenerationConfig(vocabulary=vocab)
+```
+
+Or check if a line uses only allowed words:
+
+```python
+from sonnet.generator import check_vocabulary
+
+allowed = {"the", "cat", "sat", "on", "mat"}
+check_vocabulary("The cat sat on mat", allowed)  # True
+check_vocabulary("The dog ran away", allowed)    # False
+```
+
+This enables constrained poetry like poems using only words from a source text.
+
 ## Roadmap
 
 ### v0.2 (Planned)
 - [ ] More poetic forms (villanelle, sestina, pantoum, tanka, ghazal)
 - [ ] Rhyme suggestions while composing
-- [ ] Vocabulary constraints (limit to source text words)
+- [x] Vocabulary constraints (limit to source text words)
 - [ ] Improved rhyme word determination
 - [ ] Line ranking system for candidate selection
 

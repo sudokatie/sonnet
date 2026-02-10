@@ -2,6 +2,8 @@
 Tests for generator.py - LLM-based line generation.
 """
 
+import os
+import tempfile
 import pytest
 from unittest.mock import patch, MagicMock
 from sonnet.generator import (
@@ -12,6 +14,9 @@ from sonnet.generator import (
     get_config_from_env,
     call_llm,
     generate_candidates,
+    load_vocabulary,
+    check_vocabulary,
+    filter_by_vocabulary,
 )
 from sonnet.forms import get_form
 
@@ -202,3 +207,89 @@ class TestGenerateCandidates:
         )
         
         assert len(candidates) == 3
+    
+    @patch("sonnet.generator.call_llm")
+    def test_vocabulary_filter(self, mock_llm):
+        """Filters candidates by vocabulary when set."""
+        mock_llm.return_value = "1. cat sat mat\n2. the elephant runs\n3. a fat cat"
+        
+        form = get_form("haiku")
+        vocab = {"cat", "sat", "mat", "a", "fat"}
+        config = GenerationConfig(num_candidates=5, vocabulary=vocab)
+        candidates = generate_candidates(
+            form=form,
+            theme="cat",
+            line_index=0,
+            prior_lines=[],
+            config=config,
+        )
+        
+        # Only lines 1 and 3 should pass (line 2 has "elephant" and "runs")
+        assert len(candidates) == 2
+        assert all("elephant" not in c.text for c in candidates)
+
+
+class TestVocabulary:
+    """Tests for vocabulary constraint functions."""
+    
+    def test_load_vocabulary_from_file(self):
+        """Load vocabulary from a file."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+            f.write("apple\nbanana\ncherry\n")
+            f.flush()
+            
+            vocab = load_vocabulary(f.name)
+            
+            assert vocab == {"apple", "banana", "cherry"}
+            os.unlink(f.name)
+    
+    def test_load_vocabulary_lowercases(self):
+        """Vocabulary is lowercased."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+            f.write("Apple\nBANANA\nCheRRy\n")
+            f.flush()
+            
+            vocab = load_vocabulary(f.name)
+            
+            assert vocab == {"apple", "banana", "cherry"}
+            os.unlink(f.name)
+    
+    def test_load_vocabulary_skips_empty_lines(self):
+        """Empty lines are skipped."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+            f.write("apple\n\nbanana\n\n\ncherry\n")
+            f.flush()
+            
+            vocab = load_vocabulary(f.name)
+            
+            assert vocab == {"apple", "banana", "cherry"}
+            os.unlink(f.name)
+    
+    def test_check_vocabulary_all_valid(self):
+        """All words in vocabulary returns True."""
+        vocab = {"the", "cat", "sat", "on", "mat"}
+        assert check_vocabulary("The cat sat on mat", vocab) is True
+    
+    def test_check_vocabulary_invalid_word(self):
+        """Word not in vocabulary returns False."""
+        vocab = {"the", "cat", "sat"}
+        assert check_vocabulary("The cat ran away", vocab) is False
+    
+    def test_check_vocabulary_ignores_punctuation(self):
+        """Punctuation is ignored."""
+        vocab = {"hello", "world"}
+        assert check_vocabulary("Hello, world!", vocab) is True
+    
+    def test_filter_by_vocabulary(self):
+        """Filters candidates correctly."""
+        vocab = {"the", "cat", "sat"}
+        candidates = [
+            Candidate(text="The cat sat"),
+            Candidate(text="The dog ran"),
+            Candidate(text="Cat sat there"),
+        ]
+        
+        filtered = filter_by_vocabulary(candidates, vocab)
+        
+        assert len(filtered) == 1
+        assert filtered[0].text == "The cat sat"
