@@ -157,3 +157,52 @@ class TestLastWord:
 
     def test_single_word(self):
         assert get_last_word("hello") == "hello"
+
+
+class TestSuggestRhymes:
+    """Tests for rhyme suggestion feature."""
+
+    def test_suggest_rhymes_returns_list(self):
+        """suggest_rhymes should return a list of tuples."""
+        from sonnet.rhymes import suggest_rhymes
+        results = suggest_rhymes("cat", max_results=5)
+        assert isinstance(results, list)
+        if results:
+            assert isinstance(results[0], tuple)
+            assert len(results[0]) == 3  # (word, rhyme_type, syllables)
+
+    def test_suggest_rhymes_cat(self):
+        """Common word 'cat' should have rhymes."""
+        from sonnet.rhymes import suggest_rhymes, RhymeType
+        results = suggest_rhymes("cat", max_results=10)
+        assert len(results) > 0
+        # Should find perfect rhymes like 'bat', 'hat', 'mat'
+        words = [w for w, t, s in results if t == RhymeType.PERFECT]
+        assert any(w in ["bat", "hat", "mat", "sat", "rat", "fat", "flat"] for w in words)
+
+    def test_suggest_rhymes_excludes_input_word(self):
+        """Should not include the input word itself."""
+        from sonnet.rhymes import suggest_rhymes
+        results = suggest_rhymes("love", max_results=50)
+        words = [w.lower() for w, t, s in results]
+        assert "love" not in words
+
+    def test_suggest_rhymes_syllable_filter(self):
+        """Should filter by syllable count."""
+        from sonnet.rhymes import suggest_rhymes
+        results = suggest_rhymes("day", min_syllables=2, max_syllables=2, max_results=20)
+        for word, rhyme_type, syllables in results:
+            assert syllables == 2
+
+    def test_suggest_rhymes_no_slant(self):
+        """Should exclude slant rhymes when requested."""
+        from sonnet.rhymes import suggest_rhymes, RhymeType
+        results = suggest_rhymes("love", include_slant=False, max_results=30)
+        for word, rhyme_type, syllables in results:
+            assert rhyme_type == RhymeType.PERFECT
+
+    def test_suggest_rhymes_unknown_word(self):
+        """Unknown word should return empty list."""
+        from sonnet.rhymes import suggest_rhymes
+        results = suggest_rhymes("xyzzyplugh", max_results=10)
+        assert results == []

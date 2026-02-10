@@ -152,3 +152,98 @@ def get_rhyme_groups(scheme: str) -> dict:
                 groups[letter] = []
             groups[letter].append(i)
     return groups
+
+
+def suggest_rhymes(
+    word: str,
+    max_results: int = 20,
+    min_syllables: Optional[int] = None,
+    max_syllables: Optional[int] = None,
+    include_slant: bool = True,
+) -> List[Tuple[str, RhymeType, int]]:
+    """
+    Suggest rhyming words from the CMU dictionary.
+    
+    Args:
+        word: The word to find rhymes for
+        max_results: Maximum number of results to return
+        min_syllables: Minimum syllable count filter (optional)
+        max_syllables: Maximum syllable count filter (optional)
+        include_slant: Whether to include slant rhymes
+        
+    Returns:
+        List of (word, rhyme_type, syllable_count) tuples, sorted by quality
+    """
+    from sonnet.syllables import count_syllables
+    
+    cmu = get_cmu_dict()
+    if not cmu:
+        return []
+    
+    target_rhyme = get_rhyme_phonemes(word)
+    if target_rhyme is None:
+        return []
+    
+    target_stripped = [_strip_stress(p) for p in target_rhyme]
+    target_vowels = [p for p in target_stripped if p in VOWEL_PHONEMES]
+    
+    results = []
+    word_lower = word.lower().strip()
+    
+    for candidate in cmu.keys():
+        # Skip the word itself
+        if candidate.lower() == word_lower:
+            continue
+        
+        # Skip words with numbers or special chars
+        if not candidate.isalpha():
+            continue
+        
+        candidate_rhyme = get_rhyme_phonemes(candidate)
+        if candidate_rhyme is None:
+            continue
+        
+        candidate_stripped = [_strip_stress(p) for p in candidate_rhyme]
+        
+        # Check for perfect rhyme
+        if candidate_stripped == target_stripped:
+            syllables = count_syllables(candidate)
+            
+            # Apply syllable filters
+            if min_syllables and syllables < min_syllables:
+                continue
+            if max_syllables and syllables > max_syllables:
+                continue
+                
+            results.append((candidate, RhymeType.PERFECT, syllables))
+            continue
+        
+        # Check for slant rhyme if enabled
+        if include_slant:
+            candidate_vowels = [p for p in candidate_stripped if p in VOWEL_PHONEMES]
+            
+            is_slant = False
+            # Vowels match
+            if target_vowels and candidate_vowels and target_vowels == candidate_vowels:
+                is_slant = True
+            # Last consonant matches
+            elif len(target_stripped) >= 1 and len(candidate_stripped) >= 1:
+                if target_stripped[-1] == candidate_stripped[-1]:
+                    is_slant = True
+            
+            if is_slant:
+                syllables = count_syllables(candidate)
+                if min_syllables and syllables < min_syllables:
+                    continue
+                if max_syllables and syllables > max_syllables:
+                    continue
+                results.append((candidate, RhymeType.SLANT, syllables))
+    
+    # Sort: perfect first, then by syllable count, then alphabetically
+    results.sort(key=lambda x: (
+        0 if x[1] == RhymeType.PERFECT else 1,
+        x[2],  # syllable count
+        x[0],  # alphabetically
+    ))
+    
+    return results[:max_results]

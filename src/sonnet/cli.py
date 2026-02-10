@@ -137,6 +137,53 @@ def interactive(
 
 
 @app.command()
+def rhymes(
+    word: str = typer.Argument(..., help="Word to find rhymes for"),
+    limit: int = typer.Option(20, "--limit", "-l", help="Maximum results"),
+    min_syllables: Optional[int] = typer.Option(None, "--min-syl", help="Minimum syllables"),
+    max_syllables: Optional[int] = typer.Option(None, "--max-syl", help="Maximum syllables"),
+    no_slant: bool = typer.Option(False, "--no-slant", help="Exclude slant rhymes"),
+):
+    """Find rhyming words for a given word."""
+    from sonnet.rhymes import suggest_rhymes, RhymeType
+    
+    results = suggest_rhymes(
+        word,
+        max_results=limit,
+        min_syllables=min_syllables,
+        max_syllables=max_syllables,
+        include_slant=not no_slant,
+    )
+    
+    if not results:
+        console.print(f"[yellow]No rhymes found for '{word}'[/yellow]")
+        console.print("[dim]Word may not be in the pronunciation dictionary.[/dim]")
+        raise typer.Exit(1)
+    
+    # Group by rhyme type
+    perfect = [(w, s) for w, t, s in results if t == RhymeType.PERFECT]
+    slant = [(w, s) for w, t, s in results if t == RhymeType.SLANT]
+    
+    if perfect:
+        console.print(f"\n[bold green]Perfect rhymes for '{word}':[/bold green]")
+        table = Table(show_header=True, header_style="bold")
+        table.add_column("Word")
+        table.add_column("Syllables", justify="right")
+        for w, s in perfect:
+            table.add_row(w, str(s))
+        console.print(table)
+    
+    if slant:
+        console.print(f"\n[bold yellow]Slant rhymes for '{word}':[/bold yellow]")
+        table = Table(show_header=True, header_style="bold")
+        table.add_column("Word")
+        table.add_column("Syllables", justify="right")
+        for w, s in slant:
+            table.add_row(w, str(s))
+        console.print(table)
+
+
+@app.command()
 def forms(
     name: Optional[str] = typer.Argument(None, help="Form name for details"),
     details: bool = typer.Option(False, "--details", "-d", help="Show detailed info"),
