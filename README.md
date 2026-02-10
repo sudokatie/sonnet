@@ -106,14 +106,39 @@ check_vocabulary("The dog ran away", allowed)    # False
 
 This enables constrained poetry like poems using only words from a source text.
 
+## Rhyme Suggestions
+
+Find rhyming words for your poetry:
+
+```bash
+# Basic usage
+sonnet rhymes moon
+
+# Limit results
+sonnet rhymes ocean --limit 10
+
+# Filter by syllables
+sonnet rhymes heart --min-syl 1 --max-syl 2
+
+# Perfect rhymes only (no slant rhymes)
+sonnet rhymes love --no-slant
+```
+
+Returns perfect and slant rhymes with syllable counts, sorted by quality.
+
 ## Roadmap
 
-### v0.2 (Planned)
-- [ ] More poetic forms (villanelle, sestina, pantoum, tanka, ghazal)
-- [ ] Rhyme suggestions while composing
+### v0.2 (Complete)
+- [x] More poetic forms (villanelle, pantoum, tanka, ghazal)
+- [x] Rhyme suggestions CLI command
 - [x] Vocabulary constraints (limit to source text words)
-- [ ] Improved rhyme word determination
-- [ ] Line ranking system for candidate selection
+- [x] Rhyme word determination for generation
+- [x] Line ranking system for candidate selection
+
+### v0.3 (Planned)
+- [ ] Sestina form (complex 39-line pattern)
+- [ ] Interactive mode with rhyme suggestions
+- [ ] Meter analysis and suggestions
 
 See FEATURE-BACKLOG.md in the clawd repo for detailed acceptance criteria.
 
