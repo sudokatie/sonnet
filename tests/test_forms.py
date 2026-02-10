@@ -52,6 +52,41 @@ class TestFormDefinition:
         assert fv.syllables == 0
         assert fv.rhyme_scheme is None
         assert fv.meter is None
+    
+    def test_tanka_structure(self):
+        """Tanka extends haiku with 5-7-5-7-7 syllables."""
+        tanka = FORMS["tanka"]
+        assert tanka.name == "Tanka"
+        assert tanka.lines == 5
+        assert tanka.syllables == [5, 7, 5, 7, 7]
+        assert tanka.rhyme_scheme is None
+        assert tanka.meter is None
+    
+    def test_villanelle_structure(self):
+        """Villanelle has 19 lines with repeating refrains."""
+        villanelle = FORMS["villanelle"]
+        assert villanelle.name == "Villanelle"
+        assert villanelle.lines == 19
+        assert villanelle.syllables == 10
+        assert villanelle.meter == "iambic"
+        # Has complex ABA pattern
+        assert "ABA" in villanelle.rhyme_scheme
+    
+    def test_ghazal_structure(self):
+        """Ghazal has couplets with rhyming second lines."""
+        ghazal = FORMS["ghazal"]
+        assert ghazal.name == "Ghazal"
+        assert ghazal.lines == 10  # 5 couplets
+        # Second lines of each couplet rhyme (AA, BA, CA, etc.)
+        assert "AA" in ghazal.rhyme_scheme
+    
+    def test_pantoum_structure(self):
+        """Pantoum has interlocking quatrains."""
+        pantoum = FORMS["pantoum"]
+        assert pantoum.name == "Pantoum"
+        assert pantoum.lines == 16  # 4 quatrains
+        assert pantoum.syllables == 10
+        assert pantoum.meter == "iambic"
 
 
 class TestGetForm:
@@ -90,11 +125,15 @@ class TestListForms:
         """Returns all defined forms."""
         forms = list_forms()
         assert "haiku" in forms
+        assert "tanka" in forms
         assert "limerick" in forms
         assert "shakespearean" in forms
         assert "blank_verse" in forms
         assert "free_verse" in forms
-        assert len(forms) == 5
+        assert "villanelle" in forms
+        assert "ghazal" in forms
+        assert "pantoum" in forms
+        assert len(forms) == 9
 
 
 class TestGetRhymeGroups:

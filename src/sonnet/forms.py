@@ -27,6 +27,14 @@ FORMS: Dict[str, FormDefinition] = {
         meter=None,
         description="Japanese 5-7-5 syllable poem"
     ),
+    "tanka": FormDefinition(
+        name="Tanka",
+        lines=5,
+        syllables=[5, 7, 5, 7, 7],
+        rhyme_scheme=None,
+        meter=None,
+        description="Japanese 5-7-5-7-7 syllable poem, extending haiku"
+    ),
     "limerick": FormDefinition(
         name="Limerick",
         lines=5,
@@ -58,6 +66,30 @@ FORMS: Dict[str, FormDefinition] = {
         rhyme_scheme=None,
         meter=None,
         description="No fixed constraints on meter or rhyme"
+    ),
+    "villanelle": FormDefinition(
+        name="Villanelle",
+        lines=19,
+        syllables=10,  # Typically iambic pentameter
+        rhyme_scheme="ABA ABA ABA ABA ABA ABAA",  # A1bA2 abA1 abA2 abA1 abA2 abA1A2
+        meter="iambic",
+        description="19-line poem with two repeating refrains and ABA tercets"
+    ),
+    "ghazal": FormDefinition(
+        name="Ghazal",
+        lines=10,  # 5 couplets (typically 5-15 couplets)
+        syllables=0,  # Varies, but lines should be similar length
+        rhyme_scheme="AA BA CA DA EA",  # Each couplet's second line rhymes
+        meter=None,
+        description="Couplets with rhyming second lines and a refrain (radif)"
+    ),
+    "pantoum": FormDefinition(
+        name="Pantoum",
+        lines=16,  # Can vary, must be multiple of 4
+        syllables=10,  # Often iambic pentameter
+        rhyme_scheme="ABAB",  # Pattern repeats; lines 2,4 become 1,3 of next stanza
+        meter="iambic",
+        description="Interlocking quatrains with repeating lines"
     ),
 }
 
