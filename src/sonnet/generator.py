@@ -15,6 +15,7 @@ except ImportError:
     HAS_HTTPX = False
 
 from sonnet.forms import FormDefinition, get_syllable_target, get_rhyme_groups
+from sonnet.ranker import Constraints, get_best_candidate
 
 
 @dataclass
@@ -287,9 +288,16 @@ def generate_poem(
         )
         
         if candidates:
-            # Just take the first for now
-            # TODO: Use ranker to pick best
-            lines.append(candidates[0].text)
+            # Use ranker to pick best candidate
+            constraints = Constraints(
+                target_syllables=get_syllable_target(form, i),
+                rhyme_word=rhyme_word,
+                meter=form.meter,
+                expected_syllables=get_syllable_target(form, i) if isinstance(form.syllables, int) else 10,
+            )
+            candidate_texts = [c.text for c in candidates]
+            best = get_best_candidate(candidate_texts, constraints)
+            lines.append(best.text if best else candidates[0].text)
         else:
             lines.append("")
     
