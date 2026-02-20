@@ -17,8 +17,10 @@ from sonnet.generator import (
     load_vocabulary,
     check_vocabulary,
     filter_by_vocabulary,
+    get_ending_word,
+    get_rhyme_word_for_line,
 )
-from sonnet.forms import get_form
+from sonnet.forms import get_form, FormDefinition
 
 
 class TestGenerationConfig:
@@ -293,3 +295,179 @@ class TestVocabulary:
         
         assert len(filtered) == 1
         assert filtered[0].text == "The cat sat"
+
+
+class TestGetEndingWord:
+    """Tests for extracting the ending word from a line."""
+    
+    def test_simple_line(self):
+        """Extract last word from simple line."""
+        assert get_ending_word("The cat sat on the mat") == "mat"
+    
+    def test_with_punctuation(self):
+        """Ignore trailing punctuation."""
+        assert get_ending_word("Hello, world!") == "world"
+        assert get_ending_word("Is this the end?") == "end"
+    
+    def test_with_comma(self):
+        """Handle commas and periods."""
+        assert get_ending_word("The sky is blue.") == "blue"
+        assert get_ending_word("Roses are red,") == "red"
+    
+    def test_single_word(self):
+        """Single word line."""
+        assert get_ending_word("Hello") == "hello"
+    
+    def test_empty_line(self):
+        """Empty line returns None."""
+        assert get_ending_word("") is None
+        assert get_ending_word("   ") is None
+    
+    def test_only_punctuation(self):
+        """Only punctuation returns None."""
+        assert get_ending_word("...") is None
+    
+    def test_lowercase_result(self):
+        """Result is lowercased."""
+        assert get_ending_word("THE END") == "end"
+
+
+class TestGetRhymeWordForLine:
+    """Tests for rhyme scheme tracking and rhyme word determination."""
+    
+    def test_no_rhyme_scheme(self):
+        """Form with no rhyme scheme returns None."""
+        form = get_form("haiku")  # Haiku has no rhyme scheme
+        assert get_rhyme_word_for_line(form, 0, []) is None
+        assert get_rhyme_word_for_line(form, 1, ["line one"]) is None
+    
+    def test_first_line_of_scheme_no_constraint(self):
+        """First line with a new letter has no rhyme constraint."""
+        form = get_form("limerick")  # AABBA
+        # Line 0 (A) - first A, no prior A line
+        assert get_rhyme_word_for_line(form, 0, []) is None
+        
+    def test_second_a_line_rhymes_with_first(self):
+        """Second A line should rhyme with first A line."""
+        form = get_form("limerick")  # AABBA
+        prior_lines = ["There once was a man from Maine"]
+        # Line 1 (A) - should rhyme with line 0 (A)
+        rhyme_word = get_rhyme_word_for_line(form, 1, prior_lines)
+        assert rhyme_word == "maine"
+    
+    def test_new_letter_no_constraint(self):
+        """First line with new letter has no constraint."""
+        form = get_form("limerick")  # AABBA
+        prior_lines = [
+            "There once was a man from Maine",
+            "Who danced in the pouring rain",
+        ]
+        # Line 2 (B) - first B line, no prior B
+        assert get_rhyme_word_for_line(form, 2, prior_lines) is None
+    
+    def test_second_b_line_rhymes_with_first_b(self):
+        """Second B line should rhyme with first B line."""
+        form = get_form("limerick")  # AABBA
+        prior_lines = [
+            "There once was a man from Maine",
+            "Who danced in the pouring rain",
+            "He slipped on ice",
+        ]
+        # Line 3 (B) - should rhyme with line 2 (B)
+        rhyme_word = get_rhyme_word_for_line(form, 3, prior_lines)
+        assert rhyme_word == "ice"
+    
+    def test_final_a_line_rhymes_with_first_a(self):
+        """Final A line (in AABBA) should rhyme with first A."""
+        form = get_form("limerick")  # AABBA
+        prior_lines = [
+            "There once was a man from Maine",
+            "Who danced in the pouring rain",
+            "He slipped on ice",
+            "Which wasn't too nice",
+        ]
+        # Line 4 (A) - should rhyme with line 0 (A), the first A
+        rhyme_word = get_rhyme_word_for_line(form, 4, prior_lines)
+        assert rhyme_word == "maine"
+    
+    def test_shakespearean_sonnet_abab(self):
+        """Shakespearean sonnet ABAB pattern in first quatrain."""
+        form = get_form("shakespearean")  # ABABCDCDEFEFGG
+        
+        # Line 0 (A) - no constraint
+        assert get_rhyme_word_for_line(form, 0, []) is None
+        
+        # Line 1 (B) - no constraint (first B)
+        prior = ["Shall I compare thee to a summer's day"]
+        assert get_rhyme_word_for_line(form, 1, prior) is None
+        
+        # Line 2 (A) - rhymes with line 0
+        prior = [
+            "Shall I compare thee to a summer's day",
+            "Thou art more lovely and more temperate",
+        ]
+        rhyme_word = get_rhyme_word_for_line(form, 2, prior)
+        assert rhyme_word == "day"
+        
+        # Line 3 (B) - rhymes with line 1
+        prior = [
+            "Shall I compare thee to a summer's day",
+            "Thou art more lovely and more temperate",
+            "Rough winds do shake the darling buds of May",
+        ]
+        rhyme_word = get_rhyme_word_for_line(form, 3, prior)
+        assert rhyme_word == "temperate"
+    
+    def test_index_beyond_scheme(self):
+        """Line index beyond rhyme scheme length returns None."""
+        form = FormDefinition(
+            name="Test",
+            lines=10,
+            syllables=10,
+            rhyme_scheme="AB",  # Only 2 characters
+            meter=None,
+            description="Test form"
+        )
+        assert get_rhyme_word_for_line(form, 5, ["a", "b", "c", "d", "e"]) is None
+    
+    def test_insufficient_prior_lines(self):
+        """Returns None if prior line doesn't exist yet."""
+        form = get_form("shakespearean")  # ABABCDCDEFEFGG
+        # Ask for rhyme word for line 2 (A), but only 1 prior line exists
+        prior = ["Just one line"]
+        # Line 2 should rhyme with line 0, but since we check if prior_idx < len(prior_lines),
+        # and prior_idx=0 is < len(prior)=1, it should work
+        rhyme_word = get_rhyme_word_for_line(form, 2, prior)
+        assert rhyme_word == "line"
+    
+    def test_aabb_couplet_scheme(self):
+        """Test AABB couplet rhyme scheme."""
+        form = FormDefinition(
+            name="Couplets",
+            lines=6,
+            syllables=10,
+            rhyme_scheme="AABBCC",
+            meter="iambic",
+            description="Rhyming couplets"
+        )
+        
+        # Line 0 (A) - no constraint
+        assert get_rhyme_word_for_line(form, 0, []) is None
+        
+        # Line 1 (A) - rhymes with line 0
+        prior = ["The cat sat on the old red mat"]
+        rhyme_word = get_rhyme_word_for_line(form, 1, prior)
+        assert rhyme_word == "mat"
+        
+        # Line 2 (B) - no constraint (first B)
+        prior = ["The cat sat on the old red mat", "And there it sat so fat"]
+        assert get_rhyme_word_for_line(form, 2, prior) is None
+        
+        # Line 3 (B) - rhymes with line 2
+        prior = [
+            "The cat sat on the old red mat",
+            "And there it sat so fat",
+            "The dog came by to say hello",
+        ]
+        rhyme_word = get_rhyme_word_for_line(form, 3, prior)
+        assert rhyme_word == "hello"
