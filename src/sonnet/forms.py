@@ -18,6 +18,55 @@ class FormDefinition:
     description: str
 
 
+# Sestina end-word rotation pattern
+# Each stanza uses the same 6 words as line endings, but in a rotating order
+# Pattern: line endings go to positions (6,1,5,2,4,3) -> previous stanza's order
+SESTINA_ROTATION = [
+    [1, 2, 3, 4, 5, 6],  # Stanza 1: original order
+    [6, 1, 5, 2, 4, 3],  # Stanza 2
+    [3, 6, 4, 1, 2, 5],  # Stanza 3
+    [5, 3, 2, 6, 1, 4],  # Stanza 4
+    [4, 5, 1, 3, 6, 2],  # Stanza 5
+    [2, 4, 6, 5, 3, 1],  # Stanza 6
+]
+
+# Envoi typically uses words in middle/end positions: (2,5) (4,3) (6,1)
+SESTINA_ENVOI = [(2, 5), (4, 3), (6, 1)]
+
+
+def get_sestina_end_word_order(stanza: int) -> List[int]:
+    """
+    Get the end-word order for a specific sestina stanza (0-indexed).
+    
+    Args:
+        stanza: Stanza number (0-5)
+    
+    Returns:
+        List of 1-indexed word positions for that stanza's line endings
+    """
+    if 0 <= stanza < 6:
+        return SESTINA_ROTATION[stanza]
+    raise ValueError(f"Sestina stanza must be 0-5, got {stanza}")
+
+
+def get_sestina_line_end_word(line_index: int) -> int:
+    """
+    Get which end-word (1-6) should be used for a specific line of a sestina.
+    
+    Args:
+        line_index: 0-indexed line number (0-35 for main stanzas, 36-38 for envoi)
+    
+    Returns:
+        1-indexed end-word number, or 0 if line is in envoi (special handling)
+    """
+    if line_index < 36:
+        stanza = line_index // 6
+        line_in_stanza = line_index % 6
+        return SESTINA_ROTATION[stanza][line_in_stanza]
+    # Envoi lines (36-38) need special handling - two words per line
+    return 0
+
+
 FORMS: Dict[str, FormDefinition] = {
     "haiku": FormDefinition(
         name="Haiku",
@@ -90,6 +139,14 @@ FORMS: Dict[str, FormDefinition] = {
         rhyme_scheme="ABAB",  # Pattern repeats; lines 2,4 become 1,3 of next stanza
         meter="iambic",
         description="Interlocking quatrains with repeating lines"
+    ),
+    "sestina": FormDefinition(
+        name="Sestina",
+        lines=39,  # 6 stanzas of 6 lines + 3-line envoi
+        syllables=10,  # Typically iambic pentameter
+        rhyme_scheme=None,  # No traditional rhyme; uses end-word repetition instead
+        meter="iambic",
+        description="39-line poem with 6 end-words rotating through 6 stanzas plus envoi"
     ),
 }
 

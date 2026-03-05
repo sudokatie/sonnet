@@ -10,6 +10,10 @@ from sonnet.forms import (
     list_forms,
     get_rhyme_groups,
     get_syllable_target,
+    SESTINA_ROTATION,
+    SESTINA_ENVOI,
+    get_sestina_end_word_order,
+    get_sestina_line_end_word,
 )
 
 
@@ -133,7 +137,8 @@ class TestListForms:
         assert "villanelle" in forms
         assert "ghazal" in forms
         assert "pantoum" in forms
-        assert len(forms) == 9
+        assert "sestina" in forms
+        assert len(forms) == 10
 
 
 class TestGetRhymeGroups:
@@ -195,3 +200,80 @@ class TestGetSyllableTarget:
         """Free verse returns 0 (no constraint)."""
         fv = get_form("free_verse")
         assert get_syllable_target(fv, 0) == 0
+
+
+class TestSestinaForm:
+    """Tests for sestina form and end-word rotation."""
+    
+    def test_sestina_structure(self):
+        """Sestina has 39 lines (6 stanzas of 6 + 3-line envoi)."""
+        sestina = FORMS["sestina"]
+        assert sestina.name == "Sestina"
+        assert sestina.lines == 39
+        assert sestina.syllables == 10
+        assert sestina.rhyme_scheme is None  # Uses end-word repetition instead
+        assert sestina.meter == "iambic"
+    
+    def test_get_sestina_form(self):
+        """Can get sestina via get_form."""
+        form = get_form("sestina")
+        assert form.name == "Sestina"
+    
+    def test_sestina_rotation_structure(self):
+        """SESTINA_ROTATION has 6 stanzas with 6 positions each."""
+        assert len(SESTINA_ROTATION) == 6
+        for stanza in SESTINA_ROTATION:
+            assert len(stanza) == 6
+            # Each stanza uses all 6 words (1-6)
+            assert sorted(stanza) == [1, 2, 3, 4, 5, 6]
+    
+    def test_sestina_rotation_first_stanza(self):
+        """First stanza has words in original order."""
+        assert SESTINA_ROTATION[0] == [1, 2, 3, 4, 5, 6]
+    
+    def test_sestina_rotation_pattern(self):
+        """Rotation follows the spiral pattern (6,1,5,2,4,3)."""
+        # Each stanza's order comes from previous via (6,1,5,2,4,3) mapping
+        # Stanza 2 should be [6,1,5,2,4,3] of stanza 1
+        assert SESTINA_ROTATION[1] == [6, 1, 5, 2, 4, 3]
+    
+    def test_sestina_envoi_structure(self):
+        """Envoi uses pairs of words in middle/end positions."""
+        assert len(SESTINA_ENVOI) == 3
+        # Each line has two word positions
+        for pair in SESTINA_ENVOI:
+            assert len(pair) == 2
+    
+    def test_get_sestina_end_word_order_stanza_0(self):
+        """Get end-word order for first stanza."""
+        order = get_sestina_end_word_order(0)
+        assert order == [1, 2, 3, 4, 5, 6]
+    
+    def test_get_sestina_end_word_order_stanza_5(self):
+        """Get end-word order for last stanza."""
+        order = get_sestina_end_word_order(5)
+        assert order == [2, 4, 6, 5, 3, 1]
+    
+    def test_get_sestina_end_word_order_invalid(self):
+        """Invalid stanza raises ValueError."""
+        with pytest.raises(ValueError):
+            get_sestina_end_word_order(6)
+        with pytest.raises(ValueError):
+            get_sestina_end_word_order(-1)
+    
+    def test_get_sestina_line_end_word(self):
+        """Get correct end-word for each line."""
+        # Line 0 (stanza 0, line 0) uses word 1
+        assert get_sestina_line_end_word(0) == 1
+        # Line 5 (stanza 0, line 5) uses word 6
+        assert get_sestina_line_end_word(5) == 6
+        # Line 6 (stanza 1, line 0) uses word 6
+        assert get_sestina_line_end_word(6) == 6
+        # Line 7 (stanza 1, line 1) uses word 1
+        assert get_sestina_line_end_word(7) == 1
+    
+    def test_get_sestina_line_end_word_envoi(self):
+        """Envoi lines return 0 (special handling needed)."""
+        assert get_sestina_line_end_word(36) == 0
+        assert get_sestina_line_end_word(37) == 0
+        assert get_sestina_line_end_word(38) == 0

@@ -12,7 +12,7 @@ You provide the theme and voice. Sonnet handles the mechanical tedium of constra
 
 ## Features
 
-- Nine poetic forms: haiku, tanka, limerick, Shakespearean sonnet, blank verse, free verse, villanelle, ghazal, pantoum
+- Ten poetic forms: haiku, tanka, limerick, Shakespearean sonnet, blank verse, free verse, villanelle, ghazal, pantoum, sestina
 - Accurate syllable counting (CMU Pronouncing Dictionary + heuristics)
 - Real rhyme detection (phoneme-based, not just spelling)
 - Meter scanning (iambic pentameter that actually scans)
@@ -60,6 +60,7 @@ It's not "AI writes your poem." It's collaborative composition where the machine
 | Villanelle | 19 | 10 | ABA (with refrains) | Iambic |
 | Ghazal | 10 | Variable | AA BA CA... | None |
 | Pantoum | 16 | 10 | ABAB (interlocking) | Iambic |
+| Sestina | 39 | 10 | End-word rotation | Iambic |
 
 ## Configuration
 
