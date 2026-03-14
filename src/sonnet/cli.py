@@ -226,5 +226,63 @@ def forms(
         console.print(table)
 
 
+@app.command()
+def pdf(
+    inputs: List[Path] = typer.Argument(..., help="Input poem file(s)"),
+    output: Path = typer.Option(..., "--output", "-o", help="Output PDF path"),
+    title_font: str = typer.Option("Times-Bold", "--title-font", help="Font for titles"),
+    body_font: str = typer.Option("Times-Roman", "--body-font", help="Font for body"),
+    title_size: int = typer.Option(18, "--title-size", help="Title font size"),
+    body_size: int = typer.Option(12, "--body-size", help="Body font size"),
+    page_size: str = typer.Option("letter", "--page-size", help="Page size (letter/a4)"),
+    margin: float = typer.Option(1.0, "--margin", help="Margin in inches"),
+    center: bool = typer.Option(False, "--center", help="Center poems on page"),
+    page_break: bool = typer.Option(False, "--page-break", help="Page break between poems"),
+):
+    """Export poems to PDF with nice typography."""
+    from sonnet.pdf import PdfExporter, PdfStyle, Poem
+
+    # Read input poems
+    poems = []
+    for path in inputs:
+        if not path.exists():
+            console.print(f"[red]File not found: {path}[/red]")
+            raise typer.Exit(1)
+
+        text = path.read_text()
+        # Use filename (without extension) as title
+        title = path.stem.replace("_", " ").replace("-", " ").title()
+        poem = Poem.from_text(text, title=title)
+        poems.append(poem)
+
+    if not poems:
+        console.print("[red]No poems to export[/red]")
+        raise typer.Exit(1)
+
+    # Configure style
+    style = PdfStyle(
+        page_size=page_size,
+        margin_top=margin,
+        margin_bottom=margin,
+        margin_left=margin + 0.25,
+        margin_right=margin + 0.25,
+        title_font=title_font,
+        title_size=title_size,
+        body_font=body_font,
+        body_size=body_size,
+        center_poems=center,
+        page_break_between=page_break,
+    )
+
+    # Export
+    exporter = PdfExporter(style)
+    try:
+        exporter.export(poems, output)
+        console.print(f"[green]Exported {len(poems)} poem(s) to {output}[/green]")
+    except Exception as e:
+        console.print(f"[red]Export failed: {e}[/red]")
+        raise typer.Exit(1)
+
+
 if __name__ == "__main__":
     app()
